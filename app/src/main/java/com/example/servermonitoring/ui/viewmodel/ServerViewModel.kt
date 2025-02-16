@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.servermonitoring.model.Container
 import com.example.servermonitoring.network.RetrofitInstance
+import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
@@ -33,7 +34,7 @@ class ServerViewModel : ViewModel() {
     private val _refreshInterval = MutableStateFlow(250L)
     val refreshInterval: StateFlow<Long> get() = _refreshInterval
 
-    private val _containerLogs = MutableStateFlow<MutableMap<String, String>>(mutableMapOf())
+    private val _containerLogs = MutableStateFlow<Map<String, String>>(mutableMapOf())
     val containerLogs: StateFlow<Map<String, String>> get() = _containerLogs
 
     fun updateRefreshInterval(interval: Long) {
@@ -50,7 +51,6 @@ class ServerViewModel : ViewModel() {
         viewModelScope.launch {
             try {
                 _containers.value = RetrofitInstance.api.getContainers()
-                _postgresContainers.value = RetrofitInstance.api.getPostgresContainers()
             } catch (e: Exception) {
                 Log.e("FetchContainers", "Error fetching containers", e)
             }
@@ -60,23 +60,23 @@ class ServerViewModel : ViewModel() {
     private fun startPeriodicSystemInfoUpdate() {
         viewModelScope.launch {
             while (true) {
+                val startTime = System.currentTimeMillis()
                 try {
-                    // Получаем системную информацию
-                    _uptime.value = RetrofitInstance.api.getUptime()
-                    _cpuLoad.value = RetrofitInstance.api.getCpuLoad()
-                    val memoryUsageString = RetrofitInstance.api.getMemoryUsage()
-                    val memoryParts = memoryUsageString.split(" ")
-                    if (memoryParts.size == 2) {
-                        val usedMemory = memoryParts[0].toDouble()
-                        val totalMemory = memoryParts[1].toDouble()
-                        _memoryUsage.value = "$usedMemory / $totalMemory"
-                    }
-                    _diskUsage.value = RetrofitInstance.api.getDiskUsage()
+                    val uptimeDeferred = async { RetrofitInstance.api.getUptime() }
+                    val cpuLoadDeferred = async { RetrofitInstance.api.getCpuLoad() }
+                    val memoryDeferred = async { RetrofitInstance.api.getMemoryUsage() }
+                    val diskUsageDeferred = async { RetrofitInstance.api.getDiskUsage() }
+
+                    _uptime.value = uptimeDeferred.await().uptime ?: 0L
+                    _cpuLoad.value = cpuLoadDeferred.await().cpu_load ?: 0.0
+                    _memoryUsage.value = "${memoryDeferred.await().used_memory} / ${memoryDeferred.await().total_memory}"
+                    _diskUsage.value = diskUsageDeferred.await().disk_usage ?: 0.0
                 } catch (e: Exception) {
                     Log.e("FetchSystemInfo", "Error fetching system info", e)
                 }
-
-                delay(_refreshInterval.value)
+                val elapsedTime = System.currentTimeMillis() - startTime
+                Log.d("PeriodicUpdate", "Cycle took $elapsedTime ms")
+                delay(maxOf(0, refreshInterval.value - elapsedTime))
             }
         }
     }
@@ -115,9 +115,7 @@ class ServerViewModel : ViewModel() {
     fun restartContainer(containerId: String) {
         viewModelScope.launch {
             try {
-                stopContainer(containerId)
-                delay(1000)
-                startContainer(containerId)
+                RetrofitInstance.api.restartContainer(containerId)
                 fetchContainers()
             } catch (e: Exception) {
                 Log.e("RestartContainer", "Error restarting container", e)
@@ -129,9 +127,11 @@ class ServerViewModel : ViewModel() {
         viewModelScope.launch {
             try {
                 val newLogs = RetrofitInstance.api.getContainerLogs(containerId)
-                _containerLogs.value[containerId] = _containerLogs.value[containerId]?.let { existingLogs ->
-                    existingLogs + extractNewLogs(existingLogs, newLogs)
-                } ?: newLogs
+                _containerLogs.value = _containerLogs.value.toMutableMap().apply {
+                    this[containerId] = this[containerId]?.let { existingLogs ->
+                        existingLogs + extractNewLogs(existingLogs, newLogs)
+                    } ?: newLogs
+                }
             } catch (e: Exception) {
                 Log.e("FetchContainerLogs", "Error fetching container logs", e)
             }
@@ -161,6 +161,8 @@ class ServerViewModel : ViewModel() {
     }
 
     fun clearLogs(containerId: String) {
-        _containerLogs.value[containerId] = ""
+        _containerLogs.value = _containerLogs.value.toMutableMap().apply {
+            this[containerId] = ""
+        }
     }
 }

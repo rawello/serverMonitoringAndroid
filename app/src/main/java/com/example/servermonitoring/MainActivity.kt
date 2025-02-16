@@ -15,8 +15,6 @@ import androidx.navigation.compose.rememberNavController
 import com.example.servermonitoring.model.Container
 import com.example.servermonitoring.ui.screens.ContainersScreen
 import com.example.servermonitoring.ui.screens.ContainerLogsScreen
-import com.example.servermonitoring.ui.screens.PostgresQueryScreen
-import com.example.servermonitoring.ui.screens.QueryResultScreen
 import com.example.servermonitoring.ui.screens.ServerMonitoringScreen
 import com.example.servermonitoring.ui.screens.SettingsScreen
 import com.example.servermonitoring.ui.theme.ServerMonitoringTheme
@@ -52,31 +50,11 @@ fun ServerMonitoringApp() {
         }
         composable("containers") {
             ContainersScreen(
-                onNavigateToPostgresQuery = { container ->
-                    navController.currentBackStackEntry?.savedStateHandle?.set("containerJson", container.toJson())
-                    navController.navigate("postgresQuery")
-                },
                 onNavigateToContainerLogs = { container ->
                     navController.currentBackStackEntry?.savedStateHandle?.set("containerJson", container.toJson())
                     navController.navigate("containerLogs")
                 },
                 viewModel = viewModel
-            )
-        }
-        composable("postgresQuery") {
-            val containerJson = navController.previousBackStackEntry?.savedStateHandle?.get<String>("containerJson")
-            val container = containerJson?.toContainer() ?: Container("1", "postgres:latest", "Running", "running")
-
-            PostgresQueryScreen(
-                container = container,
-                onBack = { navController.popBackStack() },
-                onNavigateToResult = { result ->
-                    navController.currentBackStackEntry?.savedStateHandle?.set("result", result)
-                    navController.navigate("queryResult")
-                },
-                onStartClick = { viewModel.startContainer(container.Id) },
-                onStopClick = { viewModel.stopContainer(container.Id) },
-                onRestartClick = { viewModel.restartContainer(container.Id) }
             )
         }
         composable("containerLogs") {
@@ -91,11 +69,6 @@ fun ServerMonitoringApp() {
                 onRestartClick = { viewModel.restartContainer(container.Id) },
                 viewModel = viewModel
             )
-        }
-        composable("queryResult") {
-            val result = navController.previousBackStackEntry?.savedStateHandle?.get<List<Map<String, Any>>>("result")
-                ?: emptyList()
-            QueryResultScreen(result = result, onBack = { navController.popBackStack() })
         }
         composable("settings") {
             SettingsScreen(

@@ -46,7 +46,6 @@ import com.example.servermonitoring.ui.viewmodel.ServerViewModel
 
 @Composable
 fun ContainersScreen(
-    onNavigateToPostgresQuery: (Container) -> Unit,
     onNavigateToContainerLogs: (Container) -> Unit,
     viewModel: ServerViewModel
 ) {
@@ -125,11 +124,7 @@ fun ContainersScreen(
                     ContainerItem(
                         container = container,
                         onClick = {
-                            if (container.Image.contains("postgres")) {
-                                onNavigateToPostgresQuery(container)
-                            } else {
                                 onNavigateToContainerLogs(container)
-                            }
                         },
                         onStartClick = {
                             selectedContainer = container
@@ -294,7 +289,6 @@ fun ContainersScreenPreview() {
     ServerMonitoringTheme {
         Surface(color = Color(0xFF121212)) {
             ContainersScreen(
-                onNavigateToPostgresQuery = {},
                 onNavigateToContainerLogs = {},
                 viewModel = ServerViewModel()
             )
