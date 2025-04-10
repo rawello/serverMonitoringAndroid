@@ -1,8 +1,9 @@
 package com.example.servermonitoring.model
 
 data class Container(
-    val Id: String,
-    val Image: String,
-    val Status: String,
-    val State: String
+    val id: String,
+    val names: List<String>,
+    val image: String,
+    val status: String,
+    val state: String
 )

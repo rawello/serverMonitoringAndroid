@@ -25,13 +25,13 @@ class ServerViewModel : ViewModel() {
     private val _cpuLoad = MutableStateFlow(0.0)
     val cpuLoad: StateFlow<Double> get() = _cpuLoad
 
-    private val _memoryUsage = MutableStateFlow("")
-    val memoryUsage: StateFlow<String> get() = _memoryUsage
+    private val _memoryUsage = MutableStateFlow(0.0)
+    val memoryUsage: StateFlow<Double> get() = _memoryUsage
 
     private val _diskUsage = MutableStateFlow(0.0)
     val diskUsage: StateFlow<Double> get() = _diskUsage
 
-    private val _refreshInterval = MutableStateFlow(250L)
+    private val _refreshInterval = MutableStateFlow(500L)
     val refreshInterval: StateFlow<Long> get() = _refreshInterval
 
     private val _containerLogs = MutableStateFlow<Map<String, String>>(mutableMapOf())
@@ -63,20 +63,31 @@ class ServerViewModel : ViewModel() {
                 val startTime = System.currentTimeMillis()
                 try {
                     val uptimeDeferred = async { RetrofitInstance.api.getUptime() }
-                    val cpuLoadDeferred = async { RetrofitInstance.api.getCpuLoad() }
+                    val cpuDeferred = async { RetrofitInstance.api.getCpuLoad() }
                     val memoryDeferred = async { RetrofitInstance.api.getMemoryUsage() }
-                    val diskUsageDeferred = async { RetrofitInstance.api.getDiskUsage() }
 
-                    _uptime.value = uptimeDeferred.await().uptime ?: 0L
-                    _cpuLoad.value = cpuLoadDeferred.await().cpu_load ?: 0.0
-                    _memoryUsage.value = "${memoryDeferred.await().used_memory} / ${memoryDeferred.await().total_memory}"
-                    _diskUsage.value = diskUsageDeferred.await().disk_usage ?: 0.0
+                    val uptimeResponse = uptimeDeferred.await()
+                    val cpuResponse = cpuDeferred.await()
+                    val memoryResponse = memoryDeferred.await()
+
+                    val systemInfo = mapOf(
+                        "uptime" to (uptimeResponse.uptimeSeconds as? Long ?: 0L),
+                        "cpu_load" to (cpuResponse.cpuLoad ?: 0.0),
+                        "memory_usage" to (memoryResponse.memoryUsage ?: 0),
+                        "disk_usage" to (memoryResponse.diskUsage ?: 0.0)
+                    )
+
+                    _uptime.value = systemInfo["uptime"] as Long
+                    _cpuLoad.value = systemInfo["cpu_load"] as Double
+                    _memoryUsage.value = systemInfo["memory_usage"] as Double
+                    _diskUsage.value = systemInfo["disk_usage"] as Double
+
                 } catch (e: Exception) {
-                    Log.e("FetchSystemInfo", "Error fetching system info", e)
+                    Log.e("SystemInfo", "Update error: ${e.message}")
                 }
-                val elapsedTime = System.currentTimeMillis() - startTime
-                Log.d("PeriodicUpdate", "Cycle took $elapsedTime ms")
-                delay(maxOf(0, refreshInterval.value - elapsedTime))
+
+                val elapsed = System.currentTimeMillis() - startTime
+                delay(maxOf(0, refreshInterval.value - elapsed))
             }
         }
     }
@@ -93,10 +104,14 @@ class ServerViewModel : ViewModel() {
     fun startContainer(containerId: String) {
         viewModelScope.launch {
             try {
-                RetrofitInstance.api.startContainer(containerId)
-                fetchContainers()
+                val response = RetrofitInstance.api.startContainer(containerId)
+                if (response.success) {
+                    fetchContainers()
+                } else {
+                    Log.e("StartContainer", "Server error: ${response.message}")
+                }
             } catch (e: Exception) {
-                Log.e("StartContainer", "Error starting container", e)
+                Log.e("StartContainer", "Error: ${e.message}")
             }
         }
     }
@@ -104,10 +119,12 @@ class ServerViewModel : ViewModel() {
     fun stopContainer(containerId: String) {
         viewModelScope.launch {
             try {
-                RetrofitInstance.api.stopContainer(containerId)
-                fetchContainers()
+                val response = RetrofitInstance.api.stopContainer(containerId)
+                if (response.success) {
+                    fetchContainers()
+                }
             } catch (e: Exception) {
-                Log.e("StopContainer", "Error stopping container", e)
+                Log.e("StopContainer", "Error: ${e.message}")
             }
         }
     }
@@ -115,10 +132,12 @@ class ServerViewModel : ViewModel() {
     fun restartContainer(containerId: String) {
         viewModelScope.launch {
             try {
-                RetrofitInstance.api.restartContainer(containerId)
-                fetchContainers()
+                val response = RetrofitInstance.api.restartContainer(containerId)
+                if (response.success) {
+                    fetchContainers()
+                }
             } catch (e: Exception) {
-                Log.e("RestartContainer", "Error restarting container", e)
+                Log.e("RestartContainer", "Error: ${e.message}")
             }
         }
     }

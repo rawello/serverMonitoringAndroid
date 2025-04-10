@@ -1,47 +1,62 @@
 package com.example.servermonitoring.ui.screens
 
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.systemBars
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.tooling.preview.Preview
-import com.example.servermonitoring.ui.theme.ServerMonitoringTheme
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material3.Checkbox
-import androidx.compose.material3.Text
-import androidx.compose.ui.Alignment
-import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.systemBars
-import androidx.compose.foundation.layout.windowInsetsPadding
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.sp
-import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.animation.core.Spring
-import androidx.compose.animation.core.spring
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.ExitToApp
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Checkbox
+import androidx.compose.material3.CheckboxDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
 import com.example.servermonitoring.model.Container
+import com.example.servermonitoring.ui.theme.ServerMonitoringTheme
 import com.example.servermonitoring.ui.viewmodel.ServerViewModel
 
 @Composable
@@ -156,7 +171,7 @@ fun ContainersScreen(
             },
             text = {
                 Text(
-                    text = "Are you sure you want to ${if (selectedContainer?.State == "running") "stop" else "start"} the container?",
+                    text = "Are you sure you want to ${if (selectedContainer?.state == "running") "stop" else "start"} the container?",
                     style = MaterialTheme.typography.bodyMedium,
                     color = Color.White
                 )
@@ -164,10 +179,10 @@ fun ContainersScreen(
             confirmButton = {
                 Button(
                     onClick = {
-                        if (selectedContainer?.State == "running") {
-                            viewModel.stopContainer(selectedContainer!!.Id)
+                        if (selectedContainer?.state == "running") {
+                            viewModel.stopContainer(selectedContainer!!.id)
                         } else {
-                            viewModel.startContainer(selectedContainer!!.Id)
+                            viewModel.startContainer(selectedContainer!!.id)
                         }
                         showConfirmationDialog = false
                         selectedContainer = null
@@ -212,14 +227,14 @@ fun ContainerItem(
         Column(modifier = Modifier.padding(16.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(
-                    imageVector = if (container.State == "running") Icons.Default.CheckCircle else Icons.Default.Close,
+                    imageVector = if (container.state == "running") Icons.Default.CheckCircle else Icons.Default.Close,
                     contentDescription = "Status",
-                    tint = if (container.State == "running") Color(0xFF4CAF50) else Color(0xFFF44336),
+                    tint = if (container.state == "running") Color(0xFF4CAF50) else Color(0xFFF44336),
                     modifier = Modifier.size(24.dp)
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
-                    text = "ID: ${shortenContainerId(container.Id)}",
+                    text = "ID: ${shortenContainerId(container.image)}",
                     style = MaterialTheme.typography.bodyLarge,
                     fontWeight = FontWeight.Bold,
                     color = Color.White
@@ -236,12 +251,12 @@ fun ContainerItem(
             }
             Spacer(modifier = Modifier.height(8.dp))
             Text(
-                text = "Image: ${container.Image}",
+                text = "Image: ${shortenContainerId(container.id)}",
                 style = MaterialTheme.typography.bodyMedium,
                 color = Color.LightGray
             )
             Text(
-                text = "Status: ${container.Status}",
+                text = "Status: ${container.status}",
                 style = MaterialTheme.typography.bodyMedium,
                 color = Color.LightGray
             )
@@ -254,7 +269,7 @@ fun ContainerItem(
                 OutlinedButton(
                     onClick = onStartClick,
                     modifier = Modifier.weight(1f),
-                    enabled = container.State != "running",
+                    enabled = container.state != "running",
                     colors = ButtonDefaults.outlinedButtonColors(
                         contentColor = Color(0xFF4CAF50),
                     ),
@@ -268,7 +283,7 @@ fun ContainerItem(
                 OutlinedButton(
                     onClick = onStopClick,
                     modifier = Modifier.weight(1f),
-                    enabled = container.State == "running",
+                    enabled = container.state == "running",
                     colors = ButtonDefaults.outlinedButtonColors(
                         contentColor = Color(0xFFF44336),
                     ),
