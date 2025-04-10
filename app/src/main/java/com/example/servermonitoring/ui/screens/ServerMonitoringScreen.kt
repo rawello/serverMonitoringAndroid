@@ -53,19 +53,6 @@ fun ServerMonitoringScreen(
     Log.d("ServerMonitoringScreen", "Uptime: $uptime")
     Log.d("ServerMonitoringScreen", "Storage: $diskUsage")
 
-    val memoryParts = memoryUsage.split("/")
-    val usedMemory = if (memoryParts.isNotEmpty() && memoryParts[0].trim().isNotEmpty()) {
-        memoryParts[0].trim().toDouble()
-    } else {
-        0.0
-    }
-    val totalMemory = if (memoryParts.size > 1 && memoryParts[1].trim().isNotEmpty()) {
-        memoryParts[1].trim().toDouble()
-    } else {
-        1.0
-    }
-    val memoryUsagePercentage = (usedMemory / totalMemory) * 100
-
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -123,7 +110,7 @@ fun ServerMonitoringScreen(
                             modifier = Modifier.fillMaxSize()
                         ) {
                             CircularProgressBar(
-                                percentage = cpuLoad * 100,
+                                percentage = cpuLoad,
                                 color = Color(0xFFBB86FC)
                             )
                             Text(
@@ -149,7 +136,7 @@ fun ServerMonitoringScreen(
                             modifier = Modifier.fillMaxSize()
                         ) {
                             CircularProgressBar(
-                                percentage = memoryUsagePercentage,
+                                percentage = memoryUsage,
                                 color = Color(0xFF4CAF50)
                             )
                             Text(
@@ -337,23 +324,23 @@ fun ContainerPreviewItem(container: Container) {
                     .size(16.dp)
                     .clip(CircleShape)
                     .background(
-                        color = if (container.State == "running") Color(0xFF4CAF50) else Color(0xFFF44336),
+                        color = if (container.state == "running") Color(0xFF4CAF50) else Color(0xFFF44336),
                     )
             )
             Spacer(modifier = Modifier.width(8.dp))
             Column {
                 Text(
-                    text = "ID: ${shortenContainerId(container.Id)}",
+                    text = "ID: ${shortenContainerId(container.id)}",
                     style = MaterialTheme.typography.bodyMedium,
                     color = Color.White
                 )
                 Text(
-                    text = "Image: ${container.Image}",
+                    text = "Image: ${container.image}",
                     style = MaterialTheme.typography.bodySmall,
                     color = Color.LightGray
                 )
                 Text(
-                    text = "Status: ${container.Status}",
+                    text = "Status: ${container.status}",
                     style = MaterialTheme.typography.bodySmall,
                     color = Color.LightGray
                 )

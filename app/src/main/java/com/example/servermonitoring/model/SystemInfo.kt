@@ -1,9 +1,13 @@
 package com.example.servermonitoring.model
 
+import com.google.gson.annotations.SerializedName
+
 data class SystemInfo(
-    val uptime: Long? = null,
-    val cpu_load: Double? = null,
-    val used_memory: Long? = null,
-    val total_memory: Long? = null,
-    val disk_usage: Double? = null
-)
+    @SerializedName("uptime") val uptimeRaw: String? = null,
+    @SerializedName("cpu_load") val cpuLoad: Double? = null,
+    @SerializedName("memory_usage") val memoryUsage: Double? = null,
+    @SerializedName("disk_usage") val diskUsage: Double? = null
+) {
+    val uptimeSeconds: Long
+        get() = uptimeRaw?.toLongOrNull() ?: 0L
+}

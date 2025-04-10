@@ -59,14 +59,20 @@ fun ServerMonitoringApp() {
         }
         composable("containerLogs") {
             val containerJson = navController.previousBackStackEntry?.savedStateHandle?.get<String>("containerJson")
-            val container = containerJson?.toContainer() ?: Container("1", "nginx:latest", "Stopped", "exited")
+            val container = containerJson?.toContainer() ?: Container(
+                id = "1",
+                names = listOf("nginx"),
+                image = "nginx:latest",
+                status = "Stopped",
+                state = "exited"
+            )
 
             ContainerLogsScreen(
                 container = container,
                 onBack = { navController.popBackStack() },
-                onStartClick = { viewModel.startContainer(container.Id) },
-                onStopClick = { viewModel.stopContainer(container.Id) },
-                onRestartClick = { viewModel.restartContainer(container.Id) },
+                onStartClick = { viewModel.startContainer(container.id) },
+                onStopClick = { viewModel.stopContainer(container.id) },
+                onRestartClick = { viewModel.restartContainer(container.id) },
                 viewModel = viewModel
             )
         }
