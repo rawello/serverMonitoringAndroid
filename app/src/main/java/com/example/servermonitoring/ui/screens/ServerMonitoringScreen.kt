@@ -53,6 +53,19 @@ fun ServerMonitoringScreen(
     Log.d("ServerMonitoringScreen", "Uptime: $uptime")
     Log.d("ServerMonitoringScreen", "Storage: $diskUsage")
 
+    val memoryParts = memoryUsage.split("/")
+    val usedMemory = if (memoryParts.isNotEmpty() && memoryParts[0].trim().isNotEmpty()) {
+        memoryParts[0].trim().toDouble()
+    } else {
+        0.0
+    }
+    val totalMemory = if (memoryParts.size > 1 && memoryParts[1].trim().isNotEmpty()) {
+        memoryParts[1].trim().toDouble()
+    } else {
+        1.0
+    }
+    val memoryUsagePercentage = (usedMemory / totalMemory) * 100
+
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -136,7 +149,7 @@ fun ServerMonitoringScreen(
                             modifier = Modifier.fillMaxSize()
                         ) {
                             CircularProgressBar(
-                                percentage = memoryUsage,
+                                percentage = memoryUsagePercentage,
                                 color = Color(0xFF4CAF50)
                             )
                             Text(
@@ -335,12 +348,12 @@ fun ContainerPreviewItem(container: Container) {
                     color = Color.White
                 )
                 Text(
-                    text = "Image: ${container.image}",
+                    text = "image: ${container.image}",
                     style = MaterialTheme.typography.bodySmall,
                     color = Color.LightGray
                 )
                 Text(
-                    text = "Status: ${container.status}",
+                    text = "status: ${container.status}",
                     style = MaterialTheme.typography.bodySmall,
                     color = Color.LightGray
                 )

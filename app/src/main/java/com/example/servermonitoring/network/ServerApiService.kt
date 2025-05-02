@@ -7,31 +7,29 @@ import retrofit2.http.*
 interface ServerApiService {
 
     @GET("/docker/containers")
-    suspend fun getContainers(): List<Container>
+    suspend fun getContainers(): List<String>
 
-    @POST("/docker/start/{id}")
-    suspend fun startContainer(@Path("id") containerId: String): DockerResponse
+    @POST("/docker/{containerId}/start")
+    suspend fun startContainer(@Path("containerId") containerId: String)
 
-    @POST("/docker/stop/{id}")
-    suspend fun stopContainer(@Path("id") containerId: String): DockerResponse
+    @POST("/docker/{containerId}/stop")
+    suspend fun stopContainer(@Path("containerId") containerId: String)
 
-    @POST("/docker/restart/{id}")
-    suspend fun restartContainer(@Path("id") containerId: String): DockerResponse
+    @POST("/docker/{containerId}/restart")
+    suspend fun restartContainer(@Path("containerId") containerId: String)
 
     @GET("/system/uptime")
-    suspend fun getUptime(): SystemInfo
+    suspend fun getUptime(): String
 
     @GET("/system/cpu-load")
-    suspend fun getCpuLoad(): SystemInfo
+    suspend fun getCpuLoad(): String
 
     @GET("/system/memory")
-    suspend fun getMemoryUsage(): SystemInfo
+    suspend fun getMemoryUsage(): String
 
-    @GET("/docker/logs/{id}")
-    suspend fun getContainerLogs(@Path("id") containerId: String): String
+//    @GET("/system/disk-usage")
+//    suspend fun getDiskUsage(): SystemInfo
+
+    @GET("/docker/{containerId}/logs")
+    suspend fun getContainerLogs(@Path("containerId") containerId: String): String
 }
-
-data class DockerResponse(
-    val success: Boolean,
-    val message: String
-)

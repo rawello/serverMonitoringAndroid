@@ -4,6 +4,7 @@ import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.servermonitoring.model.Container
+import com.example.servermonitoring.model.SystemInfo
 import com.example.servermonitoring.network.RetrofitInstance
 import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -25,13 +26,13 @@ class ServerViewModel : ViewModel() {
     private val _cpuLoad = MutableStateFlow(0.0)
     val cpuLoad: StateFlow<Double> get() = _cpuLoad
 
-    private val _memoryUsage = MutableStateFlow(0.0)
-    val memoryUsage: StateFlow<Double> get() = _memoryUsage
+    private val _memoryUsage = MutableStateFlow("")
+    val memoryUsage: StateFlow<String> get() = _memoryUsage
 
     private val _diskUsage = MutableStateFlow(0.0)
     val diskUsage: StateFlow<Double> get() = _diskUsage
 
-    private val _refreshInterval = MutableStateFlow(500L)
+    private val _refreshInterval = MutableStateFlow(1000L)
     val refreshInterval: StateFlow<Long> get() = _refreshInterval
 
     private val _containerLogs = MutableStateFlow<Map<String, String>>(mutableMapOf())
@@ -50,7 +51,11 @@ class ServerViewModel : ViewModel() {
     private fun fetchContainers() {
         viewModelScope.launch {
             try {
-                _containers.value = RetrofitInstance.api.getContainers()
+                val containersList = RetrofitInstance.api.getContainers()
+                _containers.value = Container.parseFromList(containersList)
+                _postgresContainers.value = _containers.value.filter {
+                    it.image.contains("postgres", ignoreCase = true)
+                }
             } catch (e: Exception) {
                 Log.e("FetchContainers", "Error fetching containers", e)
             }
@@ -62,32 +67,28 @@ class ServerViewModel : ViewModel() {
             while (true) {
                 val startTime = System.currentTimeMillis()
                 try {
-                    val uptimeDeferred = async { RetrofitInstance.api.getUptime() }
-                    val cpuDeferred = async { RetrofitInstance.api.getCpuLoad() }
-                    val memoryDeferred = async { RetrofitInstance.api.getMemoryUsage() }
+                    val uptimeString = RetrofitInstance.api.getUptime()
+                    val cpuLoadString = RetrofitInstance.api.getCpuLoad()
+                    val memoryString = RetrofitInstance.api.getMemoryUsage()
 
-                    val uptimeResponse = uptimeDeferred.await()
-                    val cpuResponse = cpuDeferred.await()
-                    val memoryResponse = memoryDeferred.await()
+                    val uptimeInfo = SystemInfo.parseUptime(uptimeString)
+                    val cpuLoadInfo = SystemInfo.parseCpuLoad(cpuLoadString)
+                    val memoryInfo = SystemInfo.parseMemoryUsage(memoryString)
 
-                    val systemInfo = mapOf(
-                        "uptime" to (uptimeResponse.uptimeSeconds as? Long ?: 0L),
-                        "cpu_load" to (cpuResponse.cpuLoad ?: 0.0),
-                        "memory_usage" to (memoryResponse.memoryUsage ?: 0),
-                        "disk_usage" to (memoryResponse.diskUsage ?: 0.0)
-                    )
+                    _uptime.value = uptimeInfo.uptime ?: 0L
+                    _cpuLoad.value = cpuLoadInfo.cpuLoad ?: 0.0
 
-                    _uptime.value = systemInfo["uptime"] as Long
-                    _cpuLoad.value = systemInfo["cpu_load"] as Double
-                    _memoryUsage.value = systemInfo["memory_usage"] as Double
-                    _diskUsage.value = systemInfo["disk_usage"] as Double
-
+                    memoryInfo.usedMemory?.let { used ->
+                        memoryInfo.totalMemory?.let { total ->
+                            _memoryUsage.value = "$used / $total"
+                        }
+                    }
                 } catch (e: Exception) {
-                    Log.e("SystemInfo", "Update error: ${e.message}")
+                    Log.e("FetchSystemInfo", "Error fetching system info", e)
                 }
-
-                val elapsed = System.currentTimeMillis() - startTime
-                delay(maxOf(0, refreshInterval.value - elapsed))
+                val elapsedTime = System.currentTimeMillis() - startTime
+                Log.d("PeriodicUpdate", "Cycle took $elapsedTime ms")
+                delay(_refreshInterval.value)
             }
         }
     }
@@ -104,14 +105,10 @@ class ServerViewModel : ViewModel() {
     fun startContainer(containerId: String) {
         viewModelScope.launch {
             try {
-                val response = RetrofitInstance.api.startContainer(containerId)
-                if (response.success) {
-                    fetchContainers()
-                } else {
-                    Log.e("StartContainer", "Server error: ${response.message}")
-                }
+                RetrofitInstance.api.startContainer(containerId)
+                fetchContainers()
             } catch (e: Exception) {
-                Log.e("StartContainer", "Error: ${e.message}")
+                Log.e("StartContainer", "Error starting container", e)
             }
         }
     }
@@ -119,12 +116,10 @@ class ServerViewModel : ViewModel() {
     fun stopContainer(containerId: String) {
         viewModelScope.launch {
             try {
-                val response = RetrofitInstance.api.stopContainer(containerId)
-                if (response.success) {
-                    fetchContainers()
-                }
+                RetrofitInstance.api.stopContainer(containerId)
+                fetchContainers()
             } catch (e: Exception) {
-                Log.e("StopContainer", "Error: ${e.message}")
+                Log.e("StopContainer", "Error stopping container", e)
             }
         }
     }
@@ -132,12 +127,10 @@ class ServerViewModel : ViewModel() {
     fun restartContainer(containerId: String) {
         viewModelScope.launch {
             try {
-                val response = RetrofitInstance.api.restartContainer(containerId)
-                if (response.success) {
-                    fetchContainers()
-                }
+                RetrofitInstance.api.restartContainer(containerId)
+                fetchContainers()
             } catch (e: Exception) {
-                Log.e("RestartContainer", "Error: ${e.message}")
+                Log.e("RestartContainer", "Error restarting container", e)
             }
         }
     }
