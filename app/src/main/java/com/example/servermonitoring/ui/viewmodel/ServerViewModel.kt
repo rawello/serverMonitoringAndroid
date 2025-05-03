@@ -70,13 +70,16 @@ class ServerViewModel : ViewModel() {
                     val uptimeString = RetrofitInstance.api.getUptime()
                     val cpuLoadString = RetrofitInstance.api.getCpuLoad()
                     val memoryString = RetrofitInstance.api.getMemoryUsage()
+                    val diskUsage = RetrofitInstance.api.getDiskUsage()
 
                     val uptimeInfo = SystemInfo.parseUptime(uptimeString)
                     val cpuLoadInfo = SystemInfo.parseCpuLoad(cpuLoadString)
                     val memoryInfo = SystemInfo.parseMemoryUsage(memoryString)
+                    val diskInfo = SystemInfo.parseDiskLoad(diskUsage)
 
                     _uptime.value = uptimeInfo.uptime ?: 0L
                     _cpuLoad.value = cpuLoadInfo.cpuLoad ?: 0.0
+                    _diskUsage.value = diskInfo.diskUsage ?: 0.0
 
                     memoryInfo.usedMemory?.let { used ->
                         memoryInfo.totalMemory?.let { total ->

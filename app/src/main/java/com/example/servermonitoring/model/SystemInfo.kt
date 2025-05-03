@@ -1,5 +1,7 @@
 package com.example.servermonitoring.model
 
+import android.util.Log
+
 data class SystemInfo(
     val uptime: Long? = null,
     val cpuLoad: Double? = null,
@@ -24,11 +26,19 @@ data class SystemInfo(
             }
         }
 
+        fun parseDiskLoad(diskLoadString: String): SystemInfo {
+            return try {
+                SystemInfo(diskUsage = diskLoadString.toDoubleOrNull())
+            } catch (e: Exception) {
+                SystemInfo()
+            }
+        }
+
         fun parseMemoryUsage(memoryString: String): SystemInfo {
             return try {
                 val parts = memoryString.split("/")
-                val usedMemory = parts.getOrNull(0)?.trim()?.toLongOrNull()
-                val totalMemory = parts.getOrNull(1)?.trim()?.toLongOrNull()
+                val usedMemory = parts.getOrNull(0)?.trim()?.toDoubleOrNull()?.toLong()
+                val totalMemory = parts.getOrNull(1)?.trim()?.toDoubleOrNull()?.toLong()
                 SystemInfo(usedMemory = usedMemory, totalMemory = totalMemory)
             } catch (e: Exception) {
                 SystemInfo()

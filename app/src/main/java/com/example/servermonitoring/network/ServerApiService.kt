@@ -27,8 +27,8 @@ interface ServerApiService {
     @GET("/system/memory")
     suspend fun getMemoryUsage(): String
 
-//    @GET("/system/disk-usage")
-//    suspend fun getDiskUsage(): SystemInfo
+    @GET("/system/disk")
+    suspend fun getDiskUsage(): String
 
     @GET("/docker/{containerId}/logs")
     suspend fun getContainerLogs(@Path("containerId") containerId: String): String
